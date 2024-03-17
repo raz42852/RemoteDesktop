@@ -14,11 +14,25 @@ import numpy
 
 class RemoteDesktop():
     def __init__(self, root):
+        """
+        Init function.
+
+        Parameters
+        ----------
+        root : Tk
+            The root of the tkinter window
+
+        Returns
+        -------
+        None
+        """
         self.root = root
         self.root.title("Remote Desktop")
 
+        # Set remote control var
         self.run = False
 
+        # Set remote control var
         self.server_socket = None
         self.server_host = None
         self.server_port = 7850
@@ -70,6 +84,19 @@ class RemoteDesktop():
         self.WriteOnScreen("The system was activated successfully", "defult")
 
     def start_server_request(self):
+        """
+        The function create a server for remote control who wants taking over him.
+        If someone want to control his computer, a request will show and than the remote will start.
+
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         if not self.server_socket == None:
             self.server_socket.close()
             self.server_socket = None
@@ -109,7 +136,22 @@ class RemoteDesktop():
             pass
 
     def validate_entry(self, text, div_dot):
-        # Only allow digits
+        """
+        The function check if the ip(text) is valid and return boolean param.
+
+        Parameters
+        ----------
+        text : str
+            The ip that the user typed
+        
+        div_dot : int
+            how many '.' is a valid ip
+
+        Returns
+        -------
+        True / False
+            If the ip is valid return True else False
+        """
         text = str(text)
         parts = text.split(".")
         if not len(parts) == div_dot:
@@ -124,6 +166,20 @@ class RemoteDesktop():
         return True
     
     def start_remote(self):
+        """
+        The function is called when someone want to take over on someone else and check if the 
+        ip is vaild and not connected to someone else.
+        If the connection success, it send a request to take over and show some teaching messages.
+
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         if not self.validate_entry(self.internal_ip.get(), 4):
             self.WriteOnScreen("The external IP is invalid", "warning")
         elif self.run:
@@ -148,7 +204,6 @@ class RemoteDesktop():
                     self.WriteOnScreen(f"The computer approved the takeover request", "action")
                     self.WriteOnScreen(f"To stop the takeover, click on Stop Remote or press esc", "title")
                     self.WriteOnScreen(f"The remote control will start in 10 seconds", "title")
-                    root.update()
                     time.sleep(10)
                     sock.close()
                     Thread(target=self.start_server_remote).start()
@@ -158,6 +213,18 @@ class RemoteDesktop():
                     self.stop_remote()
 
     def stop_remote(self):
+        """
+        The function stop the remote control.
+
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         self.run = False
         self.server_port = 7850
         if not self.server_host == None:
@@ -166,10 +233,37 @@ class RemoteDesktop():
             Thread(target=self.start_server_request).start()
 
     def ask_question_remote(self, client_address):
+        """
+        The function open a window and asking yes/no ques of controling his computer or not and return boolean param.
+
+        Parameters
+        ----------
+        client_address : str
+            The internal ip of the user that want taking over him
+
+        Returns
+        -------
+        True / False
+            If the user accepted the remote control
+        """
         res = messagebox.askquestion("Remote Control", f"The computer with the ip : {client_address} want to control your coumpter\n Are you agree?")
         return res == 'yes'
         
     def start_server_remote(self):
+        """
+        The function work on the controlling computer and start server on user computer and listening for clients.
+        The server wait for 3 clients : keyboard, screenshot and mouse and for each of them 
+        creating a thread to run this.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         if not self.server_socket == None:
             self.server_socket.close()
         count_clients = 0
@@ -209,6 +303,22 @@ class RemoteDesktop():
             self.WriteOnScreen(f"Error starting server: {e}", "warning")
         
     def send_keyboard(self, client_socket):
+        """
+        The function work on the controlling computer and listening to keyboard events 
+        and send them to the other computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        client_socket : socket
+            The client socket that connect as keyboard
+
+        Returns
+        -------
+        None
+        """
         while self.run:
             try:
                 button = keyboard.read_event()
@@ -228,8 +338,23 @@ class RemoteDesktop():
                 return
         client_socket.close()
 
+    def listen_mouse(self, client_socket):
+        """
+        The function work on the controlling computer and listening to mouse events 
+        and send them to the other computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+        
+        client_socket : socket
+            The client socket that connect as mouse
 
-    def listen_mouse(self, client_socket): 
+        Returns
+        -------
+        None
+        """
         last_x, last_y = pyautogui.position()
         self.otherScreenWidth = int.from_bytes(client_socket.recv(6), byteorder="big")
         self.otherScreenHeight = int.from_bytes(client_socket.recv(6), byteorder="big")
@@ -285,6 +410,23 @@ class RemoteDesktop():
         client_socket.close()
 
     def handle_received_screenshot(self, client_socket):
+        """
+        The function work on the controlling computer and get data of screenshots that got from the other computer 
+        and create a film of pictures.
+        The film showed for the controlling computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+        
+        client_socket : socket
+            The client socket that connect as mouse
+
+        Returns
+        -------
+        None
+        """
         while self.run:
             try:
                 # Receive the length of the screenshot data
@@ -311,8 +453,20 @@ class RemoteDesktop():
         cv2.destroyAllWindows()
         client_socket.close()
         
-
     def send_screenshots(self):
+        """
+        The function work on the controlled computer, connecting to the server of the the controlling computer, 
+        take screenshot and send the data of the screenshot to the other computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.server_host, self.server_port))
         sock.send("Screenshot".encode('utf-8'))
@@ -331,6 +485,19 @@ class RemoteDesktop():
         sock.close()
 
     def handle_received_keyboard(self):
+        """
+        The function work on the controlled computer, connecting to the server of the the controlling computer, 
+        and receive keyboard events and do them on the controlled computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.server_host, self.server_port))
         sock.send("Keyboard".encode('utf-8'))
@@ -350,6 +517,19 @@ class RemoteDesktop():
         sock.close()
 
     def handle_received_mouse(self):
+        """
+        The function work on the controlled computer, connecting to the server of the the controlling computer, 
+        and receive mouse events and do them on the controlled computer.
+        
+        Parameters
+        ----------
+        self : self
+            The attributes of the class
+
+        Returns
+        -------
+        None
+        """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((self.server_host, self.server_port))
         sock.send("Mouse".encode('utf-8'))
@@ -387,11 +567,26 @@ class RemoteDesktop():
         sock.close()
 
     def WriteOnScreen(self, result, tag):
-        # The function get result and tag that the result is the message and the tag is the color of the message and show it to the user
+        """
+        The function show a message in color of tag on tkinter's window.
+        
+        Parameters
+        ----------
+        result : str
+            The message to show
+
+        tag : str
+            The tag responsible for the color of the text
+
+        Returns
+        -------
+        None
+        """
         self.text_status.config(state=tk.NORMAL)
         self.text_status.insert(tk.END, result + "\n\n", tag)
         self.text_status.config(state=tk.DISABLED)
         self.text_status.see(tk.END)
+        self.root.update()
 
 if __name__ == "__main__":
     root = tk.Tk()
