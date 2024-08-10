@@ -44,7 +44,7 @@ class RemoteDesktop():
 
         # Set file path var
         self.user_ip = tk.StringVar()
-        self.user_ip.set(self.get_network_ip())# socket.gethostbyname(socket.gethostname())
+        self.user_ip.set(self.get_internal_ip())# socket.gethostbyname(socket.gethostname())
         self.user_ip_entry = ttk.Entry(root, textvariable=self.user_ip, state="readonly")
         self.user_ip_entry.pack(pady=10, ipadx=100)
 
@@ -83,11 +83,15 @@ class RemoteDesktop():
 
         self.WriteOnScreen("The system was activated successfully", "defult")
 
-    def get_network_ip(self):
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        s.connect(('<broadcast>', 0))
-        return s.getsockname()[0]
+    def get_internal_ip(self):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return None
 
     def start_server_request(self):
         """
