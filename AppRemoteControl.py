@@ -11,6 +11,8 @@ import io
 import time
 from threading import Thread
 import numpy
+import pygetwindow as gw
+
 
 class RemoteDesktop():
     def __init__(self, root):
@@ -31,6 +33,7 @@ class RemoteDesktop():
 
         # Set remote control var
         self.run = False
+        self.window = None
 
         # Set remote control var
         self.server_socket = None
@@ -331,19 +334,20 @@ class RemoteDesktop():
         """
         while self.run:
             try:
-                button = keyboard.read_event()
-                key_press = button.name
-                if key_press == 'esc':
-                    self.run = False
-                else:
-                    if button.event_type == keyboard.KEY_DOWN:
-                        client_socket.send(int(1).to_bytes(1, byteorder="big"))
-                    elif button.event_type == keyboard.KEY_UP:
-                        client_socket.send(int(2).to_bytes(1, byteorder="big"))
-                    bytes_size = len(key_press.encode('utf-8'))
+                if self.CheckFocusedWindow():
+                    button = keyboard.read_event()
+                    key_press = button.name
+                    if key_press == 'esc':
+                        self.run = False
+                    else:
+                        if button.event_type == keyboard.KEY_DOWN:
+                            client_socket.send(int(1).to_bytes(1, byteorder="big"))
+                        elif button.event_type == keyboard.KEY_UP:
+                            client_socket.send(int(2).to_bytes(1, byteorder="big"))
+                        bytes_size = len(key_press.encode('utf-8'))
 
-                    client_socket.send(int(bytes_size).to_bytes(3, byteorder="big"))
-                    client_socket.send(key_press.encode('utf-8'))
+                        client_socket.send(int(bytes_size).to_bytes(3, byteorder="big"))
+                        client_socket.send(key_press.encode('utf-8'))
             except WindowsError:
                 return
         client_socket.close()
@@ -376,15 +380,16 @@ class RemoteDesktop():
         
         def send_mouse_data(action, x=None, y=None, button=None, dx=None, dy=None):
             try:
-                client_socket.send(int(action).to_bytes(1, byteorder="big"))
-                if x is not None or y is not None:
-                    client_socket.send(int((x / self.screenWidth) * self.otherScreenWidth).to_bytes(4, byteorder="big"))
-                    client_socket.send(int((y / self.screenHeight) * self.otherScreenHeight).to_bytes(4, byteorder="big"))
-                if button is not None:
-                    client_socket.send(int(button).to_bytes(1, byteorder="big"))
-                if dx is not None or dy is not None:
-                    client_socket.send(int(dx).to_bytes(4, byteorder="big", signed=True))
-                    client_socket.send(int(dy).to_bytes(4, byteorder="big", signed=True))
+                if self.CheckFocusedWindow():
+                    client_socket.send(int(action).to_bytes(1, byteorder="big"))
+                    if x is not None or y is not None:
+                        client_socket.send(int((x / self.screenWidth) * self.otherScreenWidth).to_bytes(4, byteorder="big"))
+                        client_socket.send(int((y / self.screenHeight) * self.otherScreenHeight).to_bytes(4, byteorder="big"))
+                    if button is not None:
+                        client_socket.send(int(button).to_bytes(1, byteorder="big"))
+                    if dx is not None or dy is not None:
+                        client_socket.send(int(dx).to_bytes(4, byteorder="big", signed=True))
+                        client_socket.send(int(dy).to_bytes(4, byteorder="big", signed=True))
             except WindowsError as e:
                 if e.winerror == 10054:
                     self.run = False
@@ -458,6 +463,8 @@ class RemoteDesktop():
                 cv2.setWindowProperty("Computer Screen", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                 cv2.imshow("Computer Screen", img)
                 cv2.waitKey(1)
+                if self.window == None:
+                    self.window = gw.getWindowsWithTitle("Computer Screen")
             except WindowsError:
                 self.run = False
         cv2.destroyAllWindows()
@@ -597,6 +604,12 @@ class RemoteDesktop():
         self.text_status.config(state=tk.DISABLED)
         self.text_status.see(tk.END)
         self.root.update()
+
+    def CheckFocusedWindow(self):
+        if not self.window == None:
+            if self.window and self.window[0].isActive:
+                return True
+        return False
 
 if __name__ == "__main__":
     root = tk.Tk()
