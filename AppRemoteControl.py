@@ -81,7 +81,7 @@ class RemoteDesktop():
         self.text_status.tag_configure("warning", foreground="red")
 
         # Set quit button
-        self.quit_button = ttk.Button(root, text="Quit", command=lambda: root.quit)
+        self.quit_button = ttk.Button(root, text="Quit", command=lambda: (root.quit(), root.destroy()))
         self.quit_button.pack(pady=10)
 
         self.WriteOnScreen("The system was activated successfully", "defult")
@@ -616,3 +616,4 @@ if __name__ == "__main__":
     app = RemoteDesktop(root)
     Thread(target=app.start_server_request).start()
     root.mainloop()
+    app.server_socket.close()
